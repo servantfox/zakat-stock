@@ -73,16 +73,21 @@ def main():
             next_idx = get_date_on_or_before(target_df.index, next_haul)
             mask = (target_df.index >= current_idx[0]) & (target_df.index <= next_idx[0])
             lowest = target_df.loc[mask]["Low"].min()  # Get lowest. TODO: Maybe add the date-price?
-            zakat_df.loc[(zakat_df.Year == current_date.year), "Lowest Zakat-able"] += lowest * row.AMOUNT
+            if next_haul.year not in zakat_df.Year.unique():
+                zakat_df = pd.concat([zakat_df, pd.DataFrame({"Year": [next_haul.year],
+                                                              "Lowest Zakat-able": [0],
+                                                              "To_Pay": [0]})], ignore_index=True)
+            zakat_df.loc[(zakat_df.Year == next_haul.year), "Lowest Zakat-able"] += lowest * row.AMOUNT
             current_date = next_haul
     
-    for year in year_list:  # Calculate 2.5%
+    for year in zakat_df.Year.unique():  # Calculate 2.5%
         amount = zakat_df.loc[(zakat_df.Year == year), "Lowest Zakat-able"]
         zakat_df.loc[(zakat_df.Year == year), "To_Pay"] = amount * 0.025
     
     zakat_df = zakat_df.round({"Lowest Zakat-able": 2, "To_Pay": 2})
     
     print(zakat_df)
+    print(f"-I- Note year {this_year} is a tentative and not finalized!")
     return zakat_df
 
 
@@ -91,4 +96,4 @@ if __name__ == "__main__":
     start_time = datetime.datetime.now()
     ret = main()
     end_time = datetime.datetime.now()
-    print(f"Ran for {(end_time - start_time).total_seconds()} seconds")
+    print(f"-D- Calculated in {(end_time - start_time).total_seconds()} seconds")
